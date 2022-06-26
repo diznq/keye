@@ -1,4 +1,5 @@
 from ctypes import Structure, byref, c_long, windll
+from time import perf_counter
 
 import cv2 as cv
 import win32api
@@ -22,9 +23,11 @@ def get_eye(frame):
     global eye_y
     global eye_n
 
+    frame = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
     eyes = cls.detectMultiScale(frame)
 
     eyes = sorted(eyes, key=lambda x: (x[0], x[1]))
+    start = perf_counter()
 
     for eye in eyes:
         eye = eyes[len(eyes) - 1]
@@ -48,17 +51,29 @@ def get_eye(frame):
         if dst > 0.1:
             continue
 
-        eye = frame[sy:ey, sx:ex]
-        eye = cv.cvtColor(eye, cv.COLOR_BGR2GRAY)
-        eye = cv.resize(eye, (224, 224)) * 1.0 / 255.0
+        ax = int(avg_x * frame.shape[1])
+        ay = int(avg_y * frame.shape[0])
+        off = int((frame.shape[1] * frame.shape[0]) ** 0.5) // 12
+        off_x = off
+        off_y = off
+        sx = ax - off_x // 2
+        sy = ay - off_y // 2
+        ex = sx + off_x
+        ey = sy + off_y
 
+        eye = frame[sy:ey, sx:ex]
+        eye = cv.fastNlMeansDenoising(eye)
+        before = cv.equalizeHist(eye)
+        eye = before // 2 + eye // 2
+        eye = cv.resize(eye, (224, 224)) * 1.0 / 255
+        
         eye_x.append(px)
         eye_y.append(py)
 
-        if len(eye_x) > 20:
+        if len(eye_x) > 10:
             eye_x.pop(0)
             eye_y.pop(0)
-
+        print(perf_counter() - start)
         return px, py, eye
 
     return 0, 0, None
