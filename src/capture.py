@@ -33,4 +33,4 @@ X = np.asarray(X)
 Y = np.asarray(Y)
 Z = np.asarray(Z)
 
-np.savez("df.npz", x=X, y=Y, z=Z)
+np.savez("datasets/df.npz", x=X, y=Y, z=Z)
