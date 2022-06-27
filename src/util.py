@@ -3,7 +3,8 @@ from time import perf_counter
 
 import cv2 as cv
 import win32api
-from tensorflow.keras import layers, models
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Conv2D, Flatten, Dense, concatenate, Input
 
 user32 = windll.user32
 screen_size = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
@@ -90,32 +91,25 @@ def set_cursor(pos):
     y = int(pos[1] * screen_size[1])
     win32api.SetCursorPos((x, y))
 
-
 def get_model():
-    model = models.Sequential()
-    shape = (224, 224, 1)
-    for i in range(0, 6):
+    input1 = Input(shape=(224, 224, 1,))
+    input2 = Input(shape=(2,))
+    x = input1
+    for i in range(0, 5):
+        act = "relu"
         if i == 0:
-            model.add(
-                layers.Conv2D(
-                    32 + 2 ** (4 + i),
-                    (3, 3),
-                    strides=(2, 2),
-                    activation="selu",
-                    input_shape=shape,
-                )
-            )
-        else:
-            model.add(
-                layers.Conv2D(
-                    32 + 2 ** (4 + i), (3, 3), strides=(2, 2), activation="relu"
-                )
-            )
+            act = "selu"
+        x = Conv2D(32 + 2 ** (4 + i), (3, 3), strides=(2, 2), activation = act)(x)
+    x = Flatten()(x)
+    y = Dense(8, activation="relu")(input2)
 
-    model.add(layers.Flatten())
-    model.add(layers.Dense(2, activation="relu"))
+    img_model = Model(inputs=input1, outputs=x)
+    pos_model = Model(inputs=input2, outputs=y)
 
-    model.summary()
+    z = concatenate([img_model.output, pos_model.output])
+    z = Dense(2, activation="linear")(z)
+
+    model = Model(inputs=[input1, input2], outputs=z)
 
     model.compile(optimizer="adam", loss="mse", metrics="mse")
     return model

@@ -1,5 +1,6 @@
 import cv2 as cv
 import keyboard
+import numpy as np
 
 from util import get_eye, get_model, set_cursor
 
@@ -15,7 +16,10 @@ while True:
     ret, frame = vid.read()
     px, py, eye = get_eye(frame)
     if eye is not None:
-        pred = model.predict(eye.reshape((1, 224, 224, 1)), verbose=0)
+        pred = model.predict([
+            eye.reshape((1, 224, 224, 1)),
+            np.asarray([[px, py]])
+        ], verbose=0)
         pos = pred[0]
 
         s_x.append(pos[0])
